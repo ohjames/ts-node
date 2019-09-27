@@ -460,6 +460,8 @@ function registerExtensions (
     registerExtension(ext, ignore, register, originalJsHandler)
   }
 
+  registerJsExtension();
+
   if (preferTsExts) {
     // tslint:disable-next-line
     const preferredExtensions = new Set([...extensions, ...Object.keys(require.extensions)])
@@ -492,7 +494,17 @@ function registerExtension (
       return _compile.call(this, register.compile(code, fileName), fileName)
     }
 
+    console.log('ts require', filename);
     return old(m, filename)
+  }
+}
+
+function registerJsExtension () {
+  const originalJsHandler = require.extensions['.js'];
+
+  require.extensions['.js'] = function (m: any, filename) { // tslint:disable-line
+    console.log('js require', filename);
+    return originalJsHandler(m, filename);
   }
 }
 
