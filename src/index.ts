@@ -510,7 +510,6 @@ function registerExtension (
       return _compile.call(this, compiledCode, filename)
     }
 
-    console.log('ts require %s - %s - %s', filename, cache, process.cwd());
     return old(m, filename)
   }
 }
@@ -519,8 +518,6 @@ function registerJsExtension (cache: string, cacheDbPath: string) {
   const originalJsHandler = require.extensions['.js'];
 
   require.extensions['.js'] = function (m: any, filename) { // tslint:disable-line
-    console.log('js require %s - %s - %s', filename, cache, process.cwd());
-
     const { _compile } = m;
 
     m._compile = function (code: string, filename: string) {
