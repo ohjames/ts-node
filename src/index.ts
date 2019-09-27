@@ -1,4 +1,5 @@
 import { relative, basename, extname, resolve, dirname, join } from 'path'
+import { writeFile, stat } from 'fs';
 import sourceMapSupport = require('source-map-support')
 import yn from 'yn'
 import { BaseError } from 'make-error'
@@ -458,13 +459,16 @@ function registerExtensions (
   originalJsHandler: (m: NodeModule, filename: string) => any,
   cache?: string | null,
 ) {
+
+  const cacheDbPath = join(cache || '', '.cache.db');
+
   // Register new extensions.
   for (const ext of extensions) {
-    registerExtension(ext, ignore, register, originalJsHandler, cache)
+    registerExtension(ext, ignore, register, originalJsHandler, cache, cacheDbPath)
   }
 
   if (cache) {
-    registerJsExtension(cache);
+    registerJsExtension(cache, cacheDbPath);
   }
 
   if (preferTsExts) {
@@ -484,6 +488,7 @@ function registerExtension (
   register: Register,
   originalHandler: (m: NodeModule, filename: string) => any,
   cache?: string | null,
+  cacheDbPath?: string,
 ) {
   const old = require.extensions[ext] || originalHandler // tslint:disable-line
 
@@ -505,11 +510,15 @@ function registerExtension (
   }
 }
 
-function registerJsExtension (cache: string) {
+function registerJsExtension (cache: string, cacheDbPath: string) {
   const originalJsHandler = require.extensions['.js'];
 
   require.extensions['.js'] = function (m: any, filename) { // tslint:disable-line
     console.log('js require %s - %s - %s', filename, cache, process.cwd());
+
+    // TODO: intercept code so it can be copied into cache
+    addCacheEntry (cacheDbPath, filename);
+
     return originalJsHandler(m, filename);
   }
 }
@@ -619,3 +628,32 @@ function updateSourceMap (sourceMapText: string, fileName: string) {
 function filterDiagnostics (diagnostics: _ts.Diagnostic[], ignore: number[]) {
   return diagnostics.filter(x => ignore.indexOf(x.code) === -1)
 }
+
+/**
+ * Cache stuff from here.
+ */
+
+// output path against timestamp
+const moduleCache: { [k: string]: number } = {};
+
+let cacheOutputTimer: undefined | ReturnType<typeof setTimeout>;
+
+const addCacheEntry = (cacheDbPath: string, sourcePath: string) => {
+  stat(sourcePath, (err, { mtime }) => {
+    if (err) {
+      console.warn('Could not get mtime of %s', sourcePath)
+    }
+
+    moduleCache[sourcePath] = mtime.getTime();
+
+    if (cacheOutputTimer) {
+      clearTimeout(cacheOutputTimer);
+    }
+
+    cacheOutputTimer = setTimeout(() => {
+      writeFile(cacheDbPath, JSON.stringify(moduleCache), 'utf8', () => {});
+      cacheOutputTimer = undefined;
+    }, 500);
+  })
+};
+
