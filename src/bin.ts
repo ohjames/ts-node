@@ -22,6 +22,7 @@ const args = arg({
   '--version': arg.COUNT,
 
   // Project options.
+  '--cache': String,
   '--compiler': String,
   '--compiler-options': parse,
   '--project': String,
@@ -36,6 +37,7 @@ const args = arg({
   '--log-error': Boolean,
 
   // Aliases.
+  '-c': '--cache',
   '-e': '--eval',
   '-p': '--print',
   '-r': '--require',
@@ -52,6 +54,7 @@ const args = arg({
 })
 
 const {
+  '--cache': cache = null,
   '--help': help = false,
   '--version': version = 0,
   '--files': files = DEFAULTS.files,
@@ -118,6 +121,7 @@ const EVAL_INSTANCE = { input: '', output: '', version: 0, lines: 0 }
 
 // Register the TypeScript compiler instance.
 const service = register({
+  cache,
   files,
   pretty,
   typeCheck,

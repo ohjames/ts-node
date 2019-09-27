@@ -56,6 +56,7 @@ export const VERSION = require('../package.json').version
  * Registration options.
  */
 export interface Options {
+  cache?: string | null
   pretty?: boolean | null
   typeCheck?: boolean | null
   transpileOnly?: boolean | null
@@ -210,6 +211,7 @@ export function register (opts: Options = {}): Register {
 
   // Require the TypeScript compiler and configuration.
   const cwd = process.cwd()
+  const cache = options.cache
   const typeCheck = options.typeCheck === true || options.transpileOnly !== true
   const compiler = require.resolve(options.compiler || 'typescript', { paths: [cwd, __dirname] })
   const ts: typeof _ts = require(compiler)
@@ -420,7 +422,7 @@ export function register (opts: Options = {}): Register {
   const register: Register = { cwd, compile, getTypeInfo, extensions, ts }
 
   // Register the extensions.
-  registerExtensions(options.preferTsExts, extensions, ignore, register, originalJsHandler)
+  registerExtensions(options.preferTsExts, extensions, ignore, register, originalJsHandler, cache)
 
   return register
 }
@@ -453,11 +455,16 @@ function registerExtensions (
   extensions: string[],
   ignore: RegExp[],
   register: Register,
-  originalJsHandler: (m: NodeModule, filename: string) => any
+  originalJsHandler: (m: NodeModule, filename: string) => any,
+  cache?: string | null,
 ) {
   // Register new extensions.
   for (const ext of extensions) {
-    registerExtension(ext, ignore, register, originalJsHandler)
+    registerExtension(ext, ignore, register, originalJsHandler, cache)
+  }
+
+  if (cache) {
+    registerJsExtension(cache);
   }
 
   if (preferTsExts) {
@@ -475,7 +482,8 @@ function registerExtension (
   ext: string,
   ignore: RegExp[],
   register: Register,
-  originalHandler: (m: NodeModule, filename: string) => any
+  originalHandler: (m: NodeModule, filename: string) => any,
+  cache?: string | null,
 ) {
   const old = require.extensions[ext] || originalHandler // tslint:disable-line
 
@@ -492,7 +500,17 @@ function registerExtension (
       return _compile.call(this, register.compile(code, fileName), fileName)
     }
 
+    console.log('ts require %s - %s - %s', filename, cache, process.cwd());
     return old(m, filename)
+  }
+}
+
+function registerJsExtension (cache: string) {
+  const originalJsHandler = require.extensions['.js'];
+
+  require.extensions['.js'] = function (m: any, filename) { // tslint:disable-line
+    console.log('js require %s - %s - %s', filename, cache, process.cwd());
+    return originalJsHandler(m, filename);
   }
 }
 
