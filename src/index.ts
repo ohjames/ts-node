@@ -5,6 +5,7 @@ import yn from 'yn'
 import { BaseError } from 'make-error'
 import * as util from 'util'
 import * as _ts from 'typescript'
+import * as mkdirp from 'mkdirp'
 
 /**
  * @internal
@@ -516,8 +517,12 @@ function registerJsExtension (cache: string, cacheDbPath: string) {
   require.extensions['.js'] = function (m: any, filename) { // tslint:disable-line
     console.log('js require %s - %s - %s', filename, cache, process.cwd());
 
-    // TODO: intercept code so it can be copied into cache
-    addCacheEntry (cacheDbPath, filename);
+    const { _compile } = m;
+
+    m._compile = function (code: string, filename: string) {
+      addCacheEntry (cache, cacheDbPath, filename, code);
+      return _compile.call(this, code, filename);
+    }
 
     return originalJsHandler(m, filename);
   }
@@ -638,22 +643,46 @@ const moduleCache: { [k: string]: number } = {};
 
 let cacheOutputTimer: undefined | ReturnType<typeof setTimeout>;
 
-const addCacheEntry = (cacheDbPath: string, sourcePath: string) => {
-  stat(sourcePath, (err, { mtime }) => {
+const addCacheEntry = (cache: string, cacheDbPath: string, filename: string, code: string) => {
+  stat(filename, (err, { mtime }) => {
     if (err) {
-      console.warn('Could not get mtime of %s', sourcePath)
+      console.warn('Could not get mtime of %s', filename)
+      return
     }
 
-    moduleCache[sourcePath] = mtime.getTime();
+    moduleCache[filename] = mtime.getTime();
+    const cacheFilename = join(cache, filename);
 
-    if (cacheOutputTimer) {
-      clearTimeout(cacheOutputTimer);
-    }
+    mkdirp(
+      dirname(cacheFilename),
+      err => {
+        if (err) {
+          console.warn('Could make parent directories of %s', filename)
+          return
+        }
 
-    cacheOutputTimer = setTimeout(() => {
-      writeFile(cacheDbPath, JSON.stringify(moduleCache), 'utf8', () => {});
-      cacheOutputTimer = undefined;
-    }, 500);
+        writeFile(
+          cacheFilename,
+          code,
+          'utf8',
+          (err) => {
+            if (err) {
+              console.warn('Could create output file %s', filename)
+              return
+            }
+            if (cacheOutputTimer) {
+              clearTimeout(cacheOutputTimer);
+            }
+
+            cacheOutputTimer = setTimeout(() => {
+              writeFile(cacheDbPath, JSON.stringify(moduleCache), 'utf8', () => {});
+              cacheOutputTimer = undefined;
+            }, 500);
+          }
+        )
+      }
+    )
+
   })
 };
 
