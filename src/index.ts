@@ -488,8 +488,8 @@ function registerExtension (
   ignore: RegExp[],
   register: Register,
   originalHandler: (m: NodeModule, filename: string) => any,
-  cache?: string | null,
-  cacheDbPath?: string,
+  cache: string | null | undefined,
+  cacheDbPath: string,
 ) {
   const old = require.extensions[ext] || originalHandler // tslint:disable-line
 
@@ -500,10 +500,14 @@ function registerExtension (
 
     const _compile = m._compile
 
-    m._compile = function (code: string, fileName: string) {
-      debug('module._compile', fileName)
+    m._compile = function (code: string, filename: string) {
+      debug('module._compile', filename)
 
-      return _compile.call(this, register.compile(code, fileName), fileName)
+      const compiledCode = register.compile(code, filename);
+      if (cache) {
+        addCacheEntry(cache, cacheDbPath, filename, compiledCode);
+      }
+      return _compile.call(this, compiledCode, filename)
     }
 
     console.log('ts require %s - %s - %s', filename, cache, process.cwd());
