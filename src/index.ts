@@ -1,5 +1,5 @@
 import { relative, basename, extname, resolve, dirname, join } from 'path'
-import { writeFile, stat } from 'fs';
+import { writeFile, stat } from 'fs'
 import sourceMapSupport = require('source-map-support')
 import yn from 'yn'
 import { BaseError } from 'make-error'
@@ -461,7 +461,7 @@ function registerExtensions (
   cache?: string | null,
 ) {
 
-  const cacheDbPath = join(cache || '', '.cache.db');
+  const cacheDbPath = join(cache || '', '.cache.db')
 
   // Register new extensions.
   for (const ext of extensions) {
@@ -469,7 +469,7 @@ function registerExtensions (
   }
 
   if (cache) {
-    registerJsExtension(cache, cacheDbPath);
+    registerJsExtension(cache, cacheDbPath)
   }
 
   if (preferTsExts) {
@@ -503,9 +503,9 @@ function registerExtension (
     m._compile = function (code: string, filename: string) {
       debug('module._compile', filename)
 
-      const compiledCode = register.compile(code, filename);
+      const compiledCode = register.compile(code, filename)
       if (cache) {
-        addCacheEntry(cache, cacheDbPath, filename, compiledCode);
+        addCacheEntry(cache, cacheDbPath, filename, compiledCode)
       }
       return _compile.call(this, compiledCode, filename)
     }
@@ -515,17 +515,17 @@ function registerExtension (
 }
 
 function registerJsExtension (cache: string, cacheDbPath: string) {
-  const originalJsHandler = require.extensions['.js'];
+  const originalJsHandler = require.extensions['.js']
 
   require.extensions['.js'] = function (m: any, filename) { // tslint:disable-line
-    const { _compile } = m;
+    const { _compile } = m
 
     m._compile = function (code: string, filename: string) {
-      addCacheEntry (cache, cacheDbPath, filename, code);
-      return _compile.call(this, code, filename);
+      addCacheEntry (cache, cacheDbPath, filename, code)
+      return _compile.call(this, code, filename)
     }
 
-    return originalJsHandler(m, filename);
+    return originalJsHandler(m, filename)
   }
 }
 
@@ -640,9 +640,9 @@ function filterDiagnostics (diagnostics: _ts.Diagnostic[], ignore: number[]) {
  */
 
 // output path against timestamp
-const moduleCache: { [k: string]: number } = {};
+const moduleCache: { [k: string]: number } = {}
 
-let cacheOutputTimer: undefined | ReturnType<typeof setTimeout>;
+let cacheOutputTimer: undefined | ReturnType<typeof setTimeout>
 
 const addCacheEntry = (cache: string, cacheDbPath: string, filename: string, code: string) => {
   stat(filename, (err, { mtime }) => {
@@ -651,8 +651,8 @@ const addCacheEntry = (cache: string, cacheDbPath: string, filename: string, cod
       return
     }
 
-    moduleCache[filename] = mtime.getTime();
-    const cacheFilename = join(cache, filename);
+    moduleCache[filename] = mtime.getTime()
+    const cacheFilename = join(cache, filename)
 
     mkdirp(
       dirname(cacheFilename),
@@ -672,18 +672,18 @@ const addCacheEntry = (cache: string, cacheDbPath: string, filename: string, cod
               return
             }
             if (cacheOutputTimer) {
-              clearTimeout(cacheOutputTimer);
+              clearTimeout(cacheOutputTimer)
             }
 
             cacheOutputTimer = setTimeout(() => {
-              writeFile(cacheDbPath, JSON.stringify(moduleCache), 'utf8', () => {});
-              cacheOutputTimer = undefined;
-            }, 500);
+              writeFile(cacheDbPath, JSON.stringify(moduleCache), 'utf8', () => {})
+              cacheOutputTimer = undefined
+            }, 500)
           }
         )
       }
     )
 
   })
-};
+}
 
