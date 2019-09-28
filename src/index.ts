@@ -214,7 +214,6 @@ export function register (opts: Options = {}): Register {
 
   // Require the TypeScript compiler and configuration.
   const cwd = process.cwd()
-  const cacheDir = options.cache
   const typeCheck = options.typeCheck === true || options.transpileOnly !== true
   const compiler = require.resolve(options.compiler || 'typescript', { paths: [cwd, __dirname] })
   const ts: typeof _ts = require(compiler)
@@ -431,8 +430,8 @@ export function register (opts: Options = {}): Register {
     ignore,
     register,
     originalJsHandler,
-    cacheDir,
-    options.cacheJs,
+    options.cache,
+    options.cacheJs
   )
 
   return register
@@ -474,7 +473,7 @@ function registerExtensions (
   register: Register,
   originalJsHandler: (m: NodeModule, filename: string) => any,
   cacheDir?: string | null,
-  cacheJs?: boolean | null,
+  cacheJs?: boolean | null
 ) {
 
   const cache: Cache | undefined = cacheDir ?
@@ -504,7 +503,7 @@ function registerExtension (
   ignore: RegExp[],
   register: Register,
   originalHandler: (m: NodeModule, filename: string) => any,
-  cache?: Cache,
+  cache?: Cache
 ) {
   const old = require.extensions[ext] || originalHandler // tslint:disable-line
 
@@ -530,13 +529,13 @@ function registerExtension (
 }
 
 function registerJsExtensionForCache (cache: Cache) {
-  const originalJsHandler = require.extensions['.js']
+  const originalJsHandler = require.extensions['.js'] // tslint:disable-line
 
   require.extensions['.js'] = function (m: any, filename) { // tslint:disable-line
     const { _compile } = m
 
     m._compile = function (code: string, filename: string) {
-      addCacheEntry (cache, filename, code)
+      addCacheEntry(cache, filename, code)
       return _compile.call(this, code, filename)
     }
 
@@ -689,7 +688,7 @@ function addCacheEntry (cache: Cache, filename: string, code: string) {
 
             // output cache to database debounced
             cacheOutputTimer = setTimeout(() => {
-              writeFile(cache.dbPath, JSON.stringify(cache.modules), 'utf8', () => {})
+              writeFile(cache.dbPath, JSON.stringify(cache.modules), 'utf8', () => { /* don't care */ })
               cacheOutputTimer = undefined
             }, 500)
           }
@@ -698,4 +697,3 @@ function addCacheEntry (cache: Cache, filename: string, code: string) {
     )
   })
 }
-
