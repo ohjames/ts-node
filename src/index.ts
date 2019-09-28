@@ -59,6 +59,7 @@ export const VERSION = require('../package.json').version
  */
 export interface Options {
   cache?: string | null
+  cacheJs?: boolean | null
   pretty?: boolean | null
   typeCheck?: boolean | null
   transpileOnly?: boolean | null
@@ -424,7 +425,15 @@ export function register (opts: Options = {}): Register {
   const register: Register = { cwd, compile, getTypeInfo, extensions, ts }
 
   // Register the extensions.
-  registerExtensions(options.preferTsExts, extensions, ignore, register, originalJsHandler, cacheDir)
+  registerExtensions(
+    options.preferTsExts,
+    extensions,
+    ignore,
+    register,
+    originalJsHandler,
+    cacheDir,
+    options.cacheJs,
+  )
 
   return register
 }
@@ -465,6 +474,7 @@ function registerExtensions (
   register: Register,
   originalJsHandler: (m: NodeModule, filename: string) => any,
   cacheDir?: string | null,
+  cacheJs?: boolean | null,
 ) {
 
   const cache: Cache | undefined = cacheDir ?
@@ -476,7 +486,7 @@ function registerExtensions (
     registerExtension(ext, ignore, register, originalJsHandler, cache)
   }
 
-  if (cache) registerJsExtension(cache)
+  if (cacheJs && cache) registerJsExtensionForCache(cache)
 
   if (preferTsExts) {
     // tslint:disable-next-line
@@ -519,7 +529,7 @@ function registerExtension (
   }
 }
 
-function registerJsExtension (cache: Cache) {
+function registerJsExtensionForCache (cache: Cache) {
   const originalJsHandler = require.extensions['.js']
 
   require.extensions['.js'] = function (m: any, filename) { // tslint:disable-line

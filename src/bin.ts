@@ -23,6 +23,7 @@ const args = arg({
 
   // Project options.
   '--cache': String,
+  '--cacheJs': Boolean,
   '--compiler': String,
   '--compiler-options': parse,
   '--project': String,
@@ -38,6 +39,7 @@ const args = arg({
 
   // Aliases.
   '-c': '--cache',
+  '-j': '--cacheJs',
   '-e': '--eval',
   '-p': '--print',
   '-r': '--require',
@@ -55,6 +57,7 @@ const args = arg({
 
 const {
   '--cache': cache = null,
+  '--cacheJs': cacheJs = false,
   '--help': help = false,
   '--version': version = 0,
   '--files': files = DEFAULTS.files,
@@ -122,6 +125,7 @@ const EVAL_INSTANCE = { input: '', output: '', version: 0, lines: 0 }
 // Register the TypeScript compiler instance.
 const service = register({
   cache,
+  cacheJs,
   files,
   pretty,
   typeCheck,
