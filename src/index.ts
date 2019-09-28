@@ -213,7 +213,7 @@ export function register (opts: Options = {}): Register {
 
   // Require the TypeScript compiler and configuration.
   const cwd = process.cwd()
-  const cache = options.cache
+  const cacheDir = options.cache
   const typeCheck = options.typeCheck === true || options.transpileOnly !== true
   const compiler = require.resolve(options.compiler || 'typescript', { paths: [cwd, __dirname] })
   const ts: typeof _ts = require(compiler)
@@ -424,7 +424,7 @@ export function register (opts: Options = {}): Register {
   const register: Register = { cwd, compile, getTypeInfo, extensions, ts }
 
   // Register the extensions.
-  registerExtensions(options.preferTsExts, extensions, ignore, register, originalJsHandler, cache)
+  registerExtensions(options.preferTsExts, extensions, ignore, register, originalJsHandler, cacheDir)
 
   return register
 }
@@ -449,6 +449,12 @@ function reorderRequireExtension (ext: string) {
   require.extensions[ext] = old // tslint:disable-line
 }
 
+interface Cache {
+  dir: string
+  dbPath: string
+  modules: { [k: string]: number }
+}
+
 /**
  * Register the extensions to support when importing files.
  */
@@ -458,19 +464,19 @@ function registerExtensions (
   ignore: RegExp[],
   register: Register,
   originalJsHandler: (m: NodeModule, filename: string) => any,
-  cache?: string | null,
+  cacheDir?: string | null,
 ) {
 
-  const cacheDbPath = join(cache || '', '.cache.db')
+  const cache: Cache | undefined = cacheDir ?
+    { dir: cacheDir, dbPath: join(cacheDir , '.cache.db'), modules: {} }
+    : undefined
 
   // Register new extensions.
   for (const ext of extensions) {
-    registerExtension(ext, ignore, register, originalJsHandler, cache, cacheDbPath)
+    registerExtension(ext, ignore, register, originalJsHandler, cache)
   }
 
-  if (cache) {
-    registerJsExtension(cache, cacheDbPath)
-  }
+  if (cache) registerJsExtension(cache)
 
   if (preferTsExts) {
     // tslint:disable-next-line
@@ -488,8 +494,7 @@ function registerExtension (
   ignore: RegExp[],
   register: Register,
   originalHandler: (m: NodeModule, filename: string) => any,
-  cache: string | null | undefined,
-  cacheDbPath: string,
+  cache?: Cache,
 ) {
   const old = require.extensions[ext] || originalHandler // tslint:disable-line
 
@@ -505,7 +510,7 @@ function registerExtension (
 
       const compiledCode = register.compile(code, filename)
       if (cache) {
-        addCacheEntry(cache, cacheDbPath, filename, compiledCode)
+        addCacheEntry(cache, filename, compiledCode)
       }
       return _compile.call(this, compiledCode, filename)
     }
@@ -514,14 +519,14 @@ function registerExtension (
   }
 }
 
-function registerJsExtension (cache: string, cacheDbPath: string) {
+function registerJsExtension (cache: Cache) {
   const originalJsHandler = require.extensions['.js']
 
   require.extensions['.js'] = function (m: any, filename) { // tslint:disable-line
     const { _compile } = m
 
     m._compile = function (code: string, filename: string) {
-      addCacheEntry (cache, cacheDbPath, filename, code)
+      addCacheEntry (cache, filename, code)
       return _compile.call(this, code, filename)
     }
 
@@ -639,20 +644,17 @@ function filterDiagnostics (diagnostics: _ts.Diagnostic[], ignore: number[]) {
  * Cache stuff from here.
  */
 
-// output path against timestamp
-const moduleCache: { [k: string]: number } = {}
-
 let cacheOutputTimer: undefined | ReturnType<typeof setTimeout>
 
-const addCacheEntry = (cache: string, cacheDbPath: string, filename: string, code: string) => {
+function addCacheEntry (cache: Cache, filename: string, code: string) {
   stat(filename, (err, { mtime }) => {
     if (err) {
       console.warn('Could not get mtime of %s', filename)
       return
     }
 
-    moduleCache[filename] = mtime.getTime()
-    const cacheFilename = join(cache, filename)
+    cache.modules[filename] = mtime.getTime()
+    const cacheFilename = join(cache.dir, filename)
 
     mkdirp(
       dirname(cacheFilename),
@@ -675,15 +677,15 @@ const addCacheEntry = (cache: string, cacheDbPath: string, filename: string, cod
               clearTimeout(cacheOutputTimer)
             }
 
+            // output cache to database debounced
             cacheOutputTimer = setTimeout(() => {
-              writeFile(cacheDbPath, JSON.stringify(moduleCache), 'utf8', () => {})
+              writeFile(cache.dbPath, JSON.stringify(cache.modules), 'utf8', () => {})
               cacheOutputTimer = undefined
             }, 500)
           }
         )
       }
     )
-
   })
 }
 
