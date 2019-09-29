@@ -477,6 +477,14 @@ function registerExtensions (
     { dir: cacheDir, dbPath: join(cacheDir , '.cache.db'), modules: {} }
     : undefined
 
+  if (cache) {
+    try {
+      cache.modules = require(resolve(cache.dbPath));
+    } catch (e) {
+      // module cache doesn't exist, leave it empty
+    }
+  }
+
   // Register new extensions.
   for (const ext of extensions) {
     registerExtension(ext, ignore, register, originalJsHandler, cache)
