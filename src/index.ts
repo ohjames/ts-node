@@ -59,7 +59,6 @@ export const VERSION = require('../package.json').version
  */
 export interface Options {
   cache?: string | null
-  cacheJs?: boolean | null
   pretty?: boolean | null
   typeCheck?: boolean | null
   transpileOnly?: boolean | null
@@ -430,8 +429,7 @@ export function register (opts: Options = {}): Register {
     ignore,
     register,
     originalJsHandler,
-    options.cache,
-    options.cacheJs
+    options.cache
   )
 
   return register
@@ -472,8 +470,7 @@ function registerExtensions (
   ignore: RegExp[],
   register: Register,
   originalJsHandler: (m: NodeModule, filename: string) => any,
-  cacheDir?: string | null,
-  cacheJs?: boolean | null
+  cacheDir?: string | null
 ) {
 
   const cache: Cache | undefined = cacheDir ?
@@ -485,7 +482,7 @@ function registerExtensions (
     registerExtension(ext, ignore, register, originalJsHandler, cache)
   }
 
-  if (cacheJs && cache) registerJsExtensionForCache(cache)
+  if (cache) registerJsExtensionForCache(cache)
 
   if (preferTsExts) {
     // tslint:disable-next-line
