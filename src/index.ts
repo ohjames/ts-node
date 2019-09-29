@@ -479,7 +479,7 @@ function registerExtensions (
 
   if (cache) {
     try {
-      cache.modules = require(resolve(cache.dbPath));
+      cache.modules = require(resolve(cache.dbPath))
     } catch (e) {
       // module cache doesn't exist, leave it empty
     }
@@ -517,7 +517,12 @@ function registerExtension (
       return old(m, filename)
     }
 
-    const _compile = m._compile
+    const { _compile } = m
+
+    if (cache) {
+      const cachedSource = getSourceFromCache(cache, filename)
+      if (cachedSource) return _compile.call(this, register.compile(cachedSource, filename), filename)
+    }
 
     m._compile = function (code: string, filename: string) {
       debug('module._compile', filename)
@@ -532,18 +537,24 @@ function registerExtension (
   }
 }
 
+function getSourceFromCache (cache: Cache, filename: string): string | undefined {
+  const cachedTime = cache.modules[filename]
+  if (cachedTime) {
+    const { mtime } = statSync(filename)
+    if (mtime.getTime() === cachedTime) {
+      const cachedContent = readFileSync(join(cache.dir, filename))
+      return cachedContent.toString()
+    }
+  }
+  return undefined
+}
+
 function registerJsExtensionForCache (cache: Cache) {
   const originalJsHandler = require.extensions['.js'] // tslint:disable-line
 
   require.extensions['.js'] = function (m: any, filename) { // tslint:disable-line
-    const cachedTime = cache.modules[filename]
-    if (cachedTime) {
-      const { mtime } = statSync(filename)
-      if (mtime.getTime() === cachedTime) {
-        const cachedContent = readFileSync(join(cache.dir, filename))
-        return m._compile(cachedContent, filename)
-      }
-    }
+    const cachedSource = getSourceFromCache(cache, filename)
+    if (cachedSource) return m._compile(cachedSource, filename)
 
     const { _compile } = m
 
