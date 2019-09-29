@@ -517,11 +517,10 @@ function registerExtension (
     m._compile = function (code: string, filename: string) {
       debug('module._compile', filename)
 
-      const compiledCode = register.compile(code, filename)
-      if (cache) {
-        addCacheEntry(cache, filename, compiledCode)
-      }
-      return _compile.call(this, compiledCode, filename)
+      // it would be nice to cache the compiled code but if a dependency changes
+      // then the compiler needs to be run again on the source
+      if (cache) addCacheEntry(cache, filename, code)
+      return _compile.call(this, register.compile(code, filename), filename)
     }
 
     return old(m, filename)
