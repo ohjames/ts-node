@@ -1,5 +1,5 @@
 import { relative, basename, extname, resolve, dirname, join } from 'path'
-import { writeFile, stat } from 'fs'
+import { writeFile, stat, statSync, readFileSync } from 'fs'
 import sourceMapSupport = require('source-map-support')
 import yn from 'yn'
 import { BaseError } from 'make-error'
@@ -536,6 +536,15 @@ function registerJsExtensionForCache (cache: Cache) {
   const originalJsHandler = require.extensions['.js'] // tslint:disable-line
 
   require.extensions['.js'] = function (m: any, filename) { // tslint:disable-line
+    const cachedTime = cache.modules[filename]
+    if (cachedTime) {
+      const { mtime } = statSync(filename)
+      if (mtime.getTime() === cachedTime) {
+        const cachedContent = readFileSync(join(cache.dir, filename))
+        return m._compile(cachedContent, filename)
+      }
+    }
+
     const { _compile } = m
 
     m._compile = function (code: string, filename: string) {
