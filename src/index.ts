@@ -536,7 +536,7 @@ function registerExtension (
 
       // it would be nice to cache the compiled code but if a dependency changes
       // then the compiler needs to be run again on the source
-      if (cache) addCacheEntry(cache, filename, code)
+      if (cache) addCacheEntry(cache, code, filename)
       return _compile.call(this, register.compile(code, filename), filename)
     }
 
@@ -569,7 +569,7 @@ function registerJsExtensionForCache (cache: Cache) {
     const { _compile } = m
 
     m._compile = function (code: string, filename: string) {
-      addCacheEntry(cache, filename, code)
+      addCacheEntry(cache, code, filename)
       return _compile.call(this, code, filename)
     }
 
@@ -689,7 +689,7 @@ function filterDiagnostics (diagnostics: _ts.Diagnostic[], ignore: number[]) {
 
 let cacheOutputTimer: undefined | ReturnType<typeof setTimeout>
 
-function addCacheEntry (cache: Cache, filename: string, code: string) {
+function addCacheEntry (cache: Cache, code: string, filename: string) {
   stat(filename, (err, { mtime }) => {
     if (err) {
       console.warn('Could not get mtime of %s', filename)
