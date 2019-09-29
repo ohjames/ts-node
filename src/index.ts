@@ -521,11 +521,14 @@ function registerExtension (
 
     if (cache) {
       const cachedSource = getSourceFromCache(cache, filename)
-      if (cachedSource) return _compile.call(
-        this,
-        register.compile(cachedSource.toString(), filename),
-        filename
-      )
+      if (cachedSource) {
+        _compile.call(
+          this,
+          register.compile(cachedSource.toString(), filename),
+          filename
+        )
+        return
+      }
     }
 
     m._compile = function (code: string, filename: string) {
@@ -558,7 +561,10 @@ function registerJsExtensionForCache (cache: Cache) {
 
   require.extensions['.js'] = function (m: any, filename) { // tslint:disable-line
     const cachedSource = getSourceFromCache(cache, filename)
-    if (cachedSource) return m._compile(cachedSource, filename)
+    if (cachedSource) {
+      m._compile(cachedSource, filename)
+      return
+    }
 
     const { _compile } = m
 
@@ -690,7 +696,6 @@ function addCacheEntry (cache: Cache, filename: string, code: string) {
       return
     }
 
-    cache.modules[filename] = mtime.getTime()
     const cacheFilename = join(cache.dir, filename)
 
     mkdirp(
@@ -713,6 +718,8 @@ function addCacheEntry (cache: Cache, filename: string, code: string) {
             if (cacheOutputTimer) {
               clearTimeout(cacheOutputTimer)
             }
+
+            cache.modules[filename] = mtime.getTime()
 
             // output cache to database debounced
             cacheOutputTimer = setTimeout(() => {
