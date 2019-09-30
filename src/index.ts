@@ -517,19 +517,18 @@ function registerExtension (
       return old(m, filename)
     }
 
-    const { _compile } = m
-
     if (cache) {
       const cachedSource = getSourceFromCache(cache, filename)
       if (cachedSource) {
-        _compile.call(
-          this,
+        m._compile(
           register.compile(cachedSource.toString(), filename),
           filename
         )
         return
       }
     }
+
+    const { _compile } = m
 
     m._compile = function (code: string, filename: string) {
       debug('module._compile', filename)
