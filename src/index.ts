@@ -474,7 +474,7 @@ function registerExtensions (
 ) {
 
   const cache: Cache | undefined = cacheDir ?
-    { dir: cacheDir, dbPath: join(cacheDir , '.cache.db'), modules: {} }
+    { dir: cacheDir, dbPath: join(cacheDir , '.cache-db.json'), modules: {} }
     : undefined
 
   if (cache) {
