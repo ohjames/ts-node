@@ -520,10 +520,7 @@ function registerExtension (
     if (cache) {
       const cachedSource = getSourceFromCache(cache, filename)
       if (cachedSource) {
-        m._compile(
-          register.compile(cachedSource.toString(), filename),
-          filename
-        )
+        m._compile(register.compile(cachedSource, filename), filename)
         return
       }
     }
@@ -543,13 +540,13 @@ function registerExtension (
   }
 }
 
-function getSourceFromCache (cache: Cache, filename: string): Buffer | undefined {
+function getSourceFromCache (cache: Cache, filename: string): string | undefined {
   const cachedTime = cache.modules[filename]
   if (cachedTime) {
     const { mtime } = statSync(filename)
     if (mtime.getTime() === cachedTime) {
       const cachedContent = readFileSync(join(cache.dir, filename))
-      return cachedContent
+      return cachedContent.toString()
     }
   }
   return undefined
